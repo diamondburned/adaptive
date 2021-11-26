@@ -1,3 +1,8 @@
-.adaptive-sidebar-revealer {
+.adaptive-sidebar-revealer,
+.adaptive-avatar {
 	background-color: @theme_base_color;
+}
+
+.adaptive-avatar {
+	border-radius: 9999px;
 }

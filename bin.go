@@ -19,6 +19,9 @@ func NewBin() *Bin {
 
 // SetChild sets the child in the bin. If child is nil, then the box is cleared.
 func (b *Bin) SetChild(child gtk.Widgetter) {
+	if child == b.child {
+		return
+	}
 	if b.child != nil {
 		b.Remove(b.child)
 	}
@@ -26,4 +29,14 @@ func (b *Bin) SetChild(child gtk.Widgetter) {
 	if child != nil {
 		b.Append(child)
 	}
+}
+
+// Child returns the Bin's child.
+func (b *Bin) Child() gtk.Widgetter {
+	return b.child
+}
+
+// IsChild returns true if the given child is the bin's child.
+func (b *Bin) IsChild(child gtk.Widgetter) bool {
+	return b.child == child
 }
