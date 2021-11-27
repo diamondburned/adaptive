@@ -13,49 +13,32 @@ import (
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 )
 
-func init() {
-	gtk.Init()
-}
-
 // NewWindow creates a new window.
-func NewWindow(title string, w, h int) *gtk.Window {
-	window := gtk.NewWindow()
+func NewWindow(app *gtk.Application, title string, w, h int) *gtk.ApplicationWindow {
+	window := gtk.NewApplicationWindow(app)
 	window.SetTitle(title)
 	window.SetDefaultSize(w, h)
 	return window
 }
 
 // Run runs an app with the given window.
-func Run(w *gtk.Window) {
-	runApp(newApp(w), func(err error) {
+func Run(name string, f func(*gtk.Application)) {
+	runApp(name, f, func(err error) {
 		log.Fatalln(err)
 	})
 }
 
 // RunTest runs a test with the given window.
-func RunTest(t *testing.T, w *gtk.Window) {
-	runApp(newApp(w), func(err error) {
+func RunTest(t *testing.T, f func(*gtk.Application)) {
+	runApp(slugify(t.Name()), f, func(err error) {
 		t.Fatal(err)
 	})
 }
 
-func newApp(w *gtk.Window) *gtk.Application {
-	id := "com.github.diamondburned.adaptive.tests." + slugify(w.Title())
-
+func runApp(name string, f func(*gtk.Application), errFn func(error)) {
+	id := "com.github.diamondburned.adaptive.tests." + name
 	app := gtk.NewApplication(id, 0)
-	app.ConnectActivate(func() {
-		w.SetApplication(app)
-		w.Show()
 
-		if !testing.Verbose() {
-			glib.TimeoutSecondsAdd(1, func() { w.Close() })
-		}
-	})
-
-	return app
-}
-
-func runApp(app *gtk.Application, errFn func(error)) {
 	ch := make(chan os.Signal)
 	signal.Notify(ch, os.Interrupt)
 	go func() {
@@ -65,7 +48,11 @@ func runApp(app *gtk.Application, errFn func(error)) {
 		}
 	}()
 
-	code := app.Run(nil)
+	app.ConnectActivate(func() {
+		f(app)
+	})
+
+	code := app.Run([]string{os.Args[0]})
 
 	signal.Stop(ch)
 	close(ch)

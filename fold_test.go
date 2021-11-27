@@ -10,27 +10,28 @@ import (
 )
 
 func ExampleFold() {
-	stack := newStack()
-	stack.SetHExpand(true)
+	testapp.Run("fold", func(app *gtk.Application) {
+		stack := newStack()
+		stack.SetHExpand(true)
 
-	stackside := gtk.NewStackSidebar()
-	stackside.SetStack(stack)
+		stackside := gtk.NewStackSidebar()
+		stackside.SetStack(stack)
 
-	fold := adaptive.NewFold(gtk.PosLeft)
-	fold.SetSideChild(stackside)
-	fold.SetChild(stack)
+		fold := adaptive.NewFold(gtk.PosLeft)
+		fold.SetSideChild(stackside)
+		fold.SetChild(stack)
 
-	foldButton := adaptive.NewFoldRevealButton()
-	foldButton.ConnectFold(fold)
+		foldButton := adaptive.NewFoldRevealButton()
+		foldButton.ConnectFold(fold)
 
-	h := gtk.NewHeaderBar()
-	h.PackStart(foldButton)
+		h := gtk.NewHeaderBar()
+		h.PackStart(foldButton)
 
-	w := testapp.NewWindow("Example Sidebar", 450, 300)
-	w.SetChild(fold)
-	w.SetTitlebar(h)
-
-	testapp.Run(w)
+		w := testapp.NewWindow(app, "Example Sidebar", 450, 300)
+		w.SetChild(fold)
+		w.SetTitlebar(h)
+		w.Show()
+	})
 	// Output:
 }
 
