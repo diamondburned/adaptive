@@ -1,8 +1,6 @@
 package adaptive
 
 import (
-	"context"
-
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 )
 
@@ -12,8 +10,6 @@ type LoadablePage struct {
 	Spinner   *gtk.Spinner
 	ErrorPage *StatusPage
 	content   *Bin
-
-	ctx context.Context
 }
 
 // NewLoadablePage creates a new LoadablePage widget.
@@ -39,10 +35,6 @@ func NewLoadablePage() *LoadablePage {
 	p.Stack.AddChild(p.content)
 	p.Stack.SetVisibleChild(p.Spinner)
 	p.Stack.SetTransitionType(gtk.StackTransitionTypeCrossfade)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	p.Stack.ConnectDestroy(cancel)
-	p.ctx = ctx
 
 	return p
 }
