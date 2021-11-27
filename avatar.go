@@ -100,7 +100,7 @@ func (a *Avatar) SetFromPixbuf(p *gdkpixbuf.Pixbuf) {
 }
 
 // SetFromPaintable sets the avatar from the given paintable.
-func (a *Avatar) SetFromPaintable(p *gdk.Paintable) {
+func (a *Avatar) SetFromPaintable(p gdk.Paintabler) {
 	a.Image.SetFromPaintable(p)
 	a.updateBin(p != nil)
 }
