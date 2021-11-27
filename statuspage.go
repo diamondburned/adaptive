@@ -9,9 +9,8 @@ import (
 // description, which are all optional.
 type StatusPage struct {
 	*gtk.Grid
-	Icon        *gtk.Image
-	Title       *gtk.Label
-	Description *gtk.Label
+	Icon  *gtk.Image
+	Title *gtk.Label
 }
 
 // NewStatusPage creates a new empty status page. All its widgets are properly
@@ -27,14 +26,6 @@ func NewStatusPage() *StatusPage {
 	page.Title.AddCSSClass("adaptive-statuspage-title")
 	page.Title.SetEllipsize(pango.EllipsizeEnd)
 	page.Title.SetSingleLineMode(true)
-
-	page.Description = gtk.NewLabel("")
-	page.Description.AddCSSClass("adaptive-statuspage-description")
-	page.Description.SetSelectable(true)
-	page.Description.SetWrap(true)
-	page.Description.SetWrapMode(pango.WrapWordChar)
-	page.Description.SetJustify(gtk.JustifyCenter)
-	page.Description.SetMaxWidthChars(50)
 
 	page.Grid = gtk.NewGrid()
 	page.Grid.SetHExpand(true)
@@ -54,8 +45,8 @@ func (p *StatusPage) ensureTitle() {
 	p.Grid.Attach(p.Title, 0, 1, 1, 1)
 }
 
-func (p *StatusPage) ensureDescription() {
-	p.Grid.Attach(p.Description, 0, 2, 1, 1)
+func (p *StatusPage) ensureDescription(desc gtk.Widgetter) {
+	p.Grid.Attach(desc, 0, 2, 1, 1)
 }
 
 // SetTitle ensures the title is in the page and sets its content.
@@ -66,9 +57,22 @@ func (p *StatusPage) SetTitle(title string) {
 }
 
 // SetDescription ensures the description is in the page and sets its content.
-func (p *StatusPage) SetDescription(desc string) {
-	p.ensureDescription()
-	p.Description.SetText(desc)
+func (p *StatusPage) SetDescription(desc gtk.Widgetter) {
+	p.ensureDescription(desc)
+}
+
+// SetDescriptionText calls SetDescription with a new description label. The
+// label is justified to the middle and has a 50 characters wide width cap.
+func (p *StatusPage) SetDescriptionText(desc string) {
+	description := gtk.NewLabel(desc)
+	description.AddCSSClass("adaptive-statuspage-description")
+	description.SetSelectable(true)
+	description.SetWrap(true)
+	description.SetWrapMode(pango.WrapWordChar)
+	description.SetJustify(gtk.JustifyCenter)
+	description.SetMaxWidthChars(50)
+
+	p.SetDescription(description)
 }
 
 // SetIconName ensures the icon is in the page and sets its icon name.
