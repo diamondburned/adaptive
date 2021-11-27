@@ -2,6 +2,7 @@ package adaptive
 
 import (
 	"log"
+	"math"
 
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
@@ -66,6 +67,7 @@ type Fold struct {
 	overlay *gtk.Overlay
 	main    *gtk.Box
 
+	dimming    *gtk.Box
 	siderev    *gtk.Revealer
 	sidebox    *Bin
 	contentbox *gtk.Overlay
@@ -78,6 +80,19 @@ type Fold struct {
 
 	fold   bool
 	reveal bool
+}
+
+// Fold threshold constants that determine when swiping velocities should be
+// handled.
+var (
+	FoldXThreshold = [2]float64{800, math.Inf(+1)}
+	FoldYThreshold = [2]float64{0, 4000}
+)
+
+func isInThreshold(f float64, thres [2]float64) bool {
+	return false ||
+		+thres[0] <= f && f <= +thres[1] ||
+		-thres[0] >= f && f >= -thres[1]
 }
 
 const (
@@ -105,16 +120,17 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.siderev.SetVExpand(true)
 	f.siderev.SetHExpand(false)
 
-	dimming := gtk.NewBox(gtk.OrientationHorizontal, 0)
-	dimming.AddCSSClass("adaptive-sidebar-dimming")
-	dimming.SetCanTarget(false)
-	dimming.SetCanFocus(false)
-	dimming.SetVExpand(true)
-	dimming.SetHExpand(true)
+	f.dimming = gtk.NewBox(gtk.OrientationHorizontal, 0)
+	f.dimming.AddCSSClass("adaptive-sidebar-dimming")
+	f.dimming.SetCanTarget(false)
+	f.dimming.SetCanFocus(false)
+	f.dimming.SetVExpand(true)
+	f.dimming.SetHExpand(true)
+	f.dimming.SetVisible(false)
 
 	f.contentbox = gtk.NewOverlay()
-	f.contentbox.AddOverlay(dimming)
-	f.contentbox.SetClipOverlay(dimming, true)
+	f.contentbox.AddOverlay(f.dimming)
+	f.contentbox.SetClipOverlay(f.dimming, true)
 	f.contentbox.AddCSSClass("adaptive-sidebar-child")
 	f.contentbox.SetVExpand(true)
 	f.contentbox.SetHExpand(true)
@@ -146,24 +162,38 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.bind()
 
 	// Bind handlers that will blur the content box if the revealer is over it.
-	f.NotifyFolded(func(folded bool) { f.updateCanTarget() })
-	f.siderev.Connect("notify::reveal-child", func() { f.updateCanTarget() })
+	f.NotifyFolded(func(folded bool) { f.updateState() })
+	f.siderev.Connect("notify::reveal-child", func() { f.updateState() })
 
 	// Controller for clicking on the background.
 	bgclicker := gtk.NewGestureClick()
 	bgclicker.SetExclusive(true)
 	bgclicker.ConnectPressed(func(n int, x, y float64) {
-		if !f.fold || !f.siderev.RevealChild() {
-			return
-		}
-		// If the side revealer is open, we're folded, and the user clicked the
-		// content box, then they've clicked outside the revealer, so collapse.
-		if f.main.Pick(x, y, gtk.PickNonTargetable) == f.contentbox {
+		if f.fold && f.siderev.RevealChild() {
 			f.siderev.SetRevealChild(false)
 		}
 	})
-	// Bind it to the top widget.
+	// Bind it to the main widget. Note that f.main will be underneath the
+	// revealer overlay, so we can assume that if it's clicked, it's ever going
+	// to be clicked outside the revealer.
 	f.main.AddController(bgclicker)
+
+	// Controller for swiping.
+	swiper := gtk.NewGestureSwipe()
+	swiper.SetExclusive(true)
+	swiper.SetTouchOnly(true)
+	swiper.ConnectSwipe(func(velX, velY float64) {
+		if !f.fold {
+			return
+		}
+		if isInThreshold(velX, FoldXThreshold) && isInThreshold(velY, FoldYThreshold) {
+			// Determine the orientation of the swiping by inspecting the sign
+			// of the X (horizontal) velocity.
+			// Negative is right-to-left, and positive is left-to-right.
+			f.siderev.SetRevealChild(velX > 0)
+		}
+	})
+	f.overlay.AddController(swiper)
 
 	return f
 }
@@ -217,7 +247,12 @@ func (f *Fold) SetFolded(folded bool) {
 // change if the sidebar isn't currently folded.
 func (f *Fold) SetRevealSide(reveal bool) {
 	f.reveal = reveal
-	f.updateRevealSide()
+	f.doRevealSide()
+}
+
+func (f *Fold) doRevealSide() {
+	reveal := f.reveal || !f.fold
+	f.siderev.SetRevealChild(reveal)
 }
 
 // SideIsRevealed returns true if the sidebar is revealed. If the sidebar is not
@@ -303,21 +338,20 @@ func (f *Fold) updateLayout() {
 	}
 }
 
-func (f *Fold) updateRevealSide() {
-	reveal := f.reveal || !f.fold
-	f.siderev.SetRevealChild(reveal)
+func (f *Fold) updateState() {
+	reveal := f.siderev.RevealChild()
+
+	// If we're folded, then the user shouldn't be able to target the
+	// content box behind the revealer.
+	f.contentbox.SetCanTarget(!f.fold || !reveal)
+	// Only show the dimming overlay if we're folded.
+	f.dimming.SetVisible(f.fold)
 
 	if reveal {
 		f.overlay.AddCSSClass("adaptive-sidebar-open")
 	} else {
 		f.overlay.RemoveCSSClass("adaptive-sidebar-open")
 	}
-}
-
-func (f *Fold) updateCanTarget() {
-	// If we're folded, then the user shouldn't be able to target the
-	// content box behind the revealer.
-	f.contentbox.SetCanTarget(!f.fold || !f.siderev.RevealChild())
 }
 
 func (f *Fold) doFold() {
@@ -330,7 +364,8 @@ func (f *Fold) doFold() {
 	f.overlay.AddOverlay(f.siderev)
 	f.overlay.SetMeasureOverlay(f.siderev, true)
 
-	f.updateRevealSide()
+	f.doRevealSide()
+	f.updateState()
 	f.notifyFolded()
 }
 
@@ -348,6 +383,7 @@ func (f *Fold) doUnfold() {
 		f.main.Append(f.siderev)
 	}
 
-	f.updateRevealSide()
+	f.doRevealSide()
+	f.updateState()
 	f.notifyFolded()
 }
