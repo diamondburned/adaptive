@@ -69,6 +69,7 @@ type Fold struct {
 	onFold func(bool)
 
 	fpos   gtk.PositionType
+	fthres int
 	fwidth int
 
 	fold   bool
@@ -76,20 +77,21 @@ type Fold struct {
 }
 
 const (
-	defaultFoldWidth     = 500
-	sidebarMarginTrigger = 50
+	defaultFoldWidth     = 200
+	defaultFoldThreshold = 400
 )
 
 // NewFold creates a new sidebar.
 func NewFold(position gtk.PositionType) *Fold {
 	f := &Fold{
 		fpos:   position,
+		fthres: defaultFoldThreshold,
 		fwidth: defaultFoldWidth,
 		fold:   false,
 	}
 
 	f.sidebox = NewBin()
-	f.sidebox.SetSizeRequest(defaultFoldWidth/2, -1)
+	f.sidebox.SetSizeRequest(f.fwidth, -1)
 	f.sidebox.AddCSSClass("adaptive-sidebar-side")
 	f.sidebox.SetVExpand(true)
 
@@ -135,20 +137,28 @@ func NewFold(position gtk.PositionType) *Fold {
 
 // SetFoldThreshold sets the width threshold that the sidebar will determine
 // whether or not to fold.
-func (f *Fold) SetFoldThreshold(fwidth int) {
-	f.fwidth = fwidth
+func (f *Fold) SetFoldThreshold(threshold int) {
+	f.fthres = threshold
 	f.updateLayout()
 }
 
 // FoldThreshold returns the fold width.
 func (f *Fold) FoldThreshold() int {
-	return f.fwidth
+	return f.fthres
+}
+
+// SetFoldWidth sets the width of the sidebar. The width must be lower than the
+// fold threshold.
+func (f *Fold) SetFoldWidth(width int) {
+	f.sidebox.SetSizeRequest(width, -1)
+	f.updateLayout()
 }
 
 // FoldWidth returns the width of the sidebar. It is calculated from the fold
 // threshold.
 func (f *Fold) FoldWidth() int {
-	return f.fwidth / 2
+	w, _ := f.sidebox.SizeRequest()
+	return w
 }
 
 // SetSideChild sets the sidebar's side content.
@@ -229,7 +239,7 @@ func (f *Fold) bind(widget gtk.Widgetter) {
 }
 
 func (f *Fold) updateLayout() {
-	if (f.fwidth + sidebarMarginTrigger) <= f.overlay.AllocatedWidth() {
+	if f.fthres <= f.overlay.AllocatedWidth() {
 		f.doUnfold()
 	} else {
 		f.doFold()
