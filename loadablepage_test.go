@@ -13,6 +13,8 @@ func ExampleLoadablePage() {
 	const margin = 8
 
 	testapp.Run("loadable-page", func(app *gtk.Application) {
+		adaptive.Init()
+
 		errorCheck := gtk.NewCheckButtonWithLabel("Erroneous")
 		errorCheck.SetHExpand(true)
 

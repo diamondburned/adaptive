@@ -49,6 +49,10 @@ func (b *FoldRevealButton) ConnectFold(fold *Fold) {
 		fold.SetRevealSide(b.Button.Active())
 	})
 
+	fold.NotifyRevealed(func(revealed bool) {
+		b.Button.SetActive(revealed)
+	})
+
 	fold.NotifyFolded(func(folded bool) {
 		b.SetRevealChild(folded)
 		b.Button.SetActive(fold.SideIsRevealed())
@@ -64,7 +68,7 @@ type Fold struct {
 
 	siderev    *gtk.Revealer
 	sidebox    *Bin
-	contentbox *Bin
+	contentbox *gtk.Overlay
 
 	onFold func(bool)
 
@@ -101,7 +105,16 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.siderev.SetVExpand(true)
 	f.siderev.SetHExpand(false)
 
-	f.contentbox = NewBin()
+	dimming := gtk.NewBox(gtk.OrientationHorizontal, 0)
+	dimming.AddCSSClass("adaptive-sidebar-dimming")
+	dimming.SetCanTarget(false)
+	dimming.SetCanFocus(false)
+	dimming.SetVExpand(true)
+	dimming.SetHExpand(true)
+
+	f.contentbox = gtk.NewOverlay()
+	f.contentbox.AddOverlay(dimming)
+	f.contentbox.SetClipOverlay(dimming, true)
 	f.contentbox.AddCSSClass("adaptive-sidebar-child")
 	f.contentbox.SetVExpand(true)
 	f.contentbox.SetHExpand(true)
@@ -130,7 +143,27 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.overlay.SetVExpand(true)
 
 	f.Widgetter = f.overlay
-	f.bind(f.Widgetter)
+	f.bind()
+
+	// Bind handlers that will blur the content box if the revealer is over it.
+	f.NotifyFolded(func(folded bool) { f.updateCanTarget() })
+	f.siderev.Connect("notify::reveal-child", func() { f.updateCanTarget() })
+
+	// Controller for clicking on the background.
+	bgclicker := gtk.NewGestureClick()
+	bgclicker.SetExclusive(true)
+	bgclicker.ConnectPressed(func(n int, x, y float64) {
+		if !f.fold || !f.siderev.RevealChild() {
+			return
+		}
+		// If the side revealer is open, we're folded, and the user clicked the
+		// content box, then they've clicked outside the revealer, so collapse.
+		if f.main.Pick(x, y, gtk.PickNonTargetable) == f.contentbox {
+			f.siderev.SetRevealChild(false)
+		}
+	})
+	// Bind it to the top widget.
+	f.main.AddController(bgclicker)
 
 	return f
 }
@@ -193,7 +226,14 @@ func (f *Fold) SideIsRevealed() bool {
 	return f.siderev.RevealChild()
 }
 
-// NotifyFolded subscribes f to be called if the sidebar is folded or unfolded.
+// NotifyRevealed subscribes fn to be called if the sidebar is revealed or not.
+func (f *Fold) NotifyRevealed(fn func(revealed bool)) {
+	f.siderev.Connect("notify::reveal-child", func() {
+		fn(f.siderev.RevealChild())
+	})
+}
+
+// NotifyFolded subscribes fn to be called if the sidebar is folded or unfolded.
 func (f *Fold) NotifyFolded(fn func(folded bool)) {
 	defer f.notifyFolded()
 
@@ -220,17 +260,34 @@ func (f *Fold) notifyFolded() {
 	}
 }
 
-func (f *Fold) bind(widget gtk.Widgetter) {
+// QueueResize should be called when Fold's parent widths are changed.
+func (f *Fold) QueueResize() {
+	f.updateLayout()
+	gtk.BaseWidget(f).QueueResize()
+}
+
+func (f *Fold) bind() {
 	var handle glib.SignalHandle
 	var surface *gdk.Surface
 
-	w := gtk.BaseWidget(widget)
+	w := f.overlay
+
+	// Hack to resize the first time the widget has a size.
+	w.AddTickCallback(func(gtk.Widgetter, gdk.FrameClocker) bool {
+		if w.AllocatedWidth() > 0 {
+			f.updateLayout()
+			return false
+		}
+		// Retry on the next frame.
+		return true
+	})
 
 	w.ConnectRealize(func() {
-		f.updateLayout()
-
+		// TODO: this doesn't cover the page where the inside is changed without
+		// the window being resized. It might be worth it to have a slow path
+		// that checks the width and updates the size every 1000/30ms or so.
 		surface = gdk.BaseSurface(w.GetNative().Surface())
-		handle = surface.ConnectLayout(func(int, int) { f.updateLayout() })
+		handle = surface.Connect("notify::width", func() { f.updateLayout() })
 	})
 	w.ConnectUnrealize(func() {
 		surface.HandlerDisconnect(handle)
@@ -255,6 +312,12 @@ func (f *Fold) updateRevealSide() {
 	} else {
 		f.overlay.RemoveCSSClass("adaptive-sidebar-open")
 	}
+}
+
+func (f *Fold) updateCanTarget() {
+	// If we're folded, then the user shouldn't be able to target the
+	// content box behind the revealer.
+	f.contentbox.SetCanTarget(!f.fold || !f.siderev.RevealChild())
 }
 
 func (f *Fold) doFold() {

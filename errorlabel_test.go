@@ -10,6 +10,8 @@ import (
 
 func ExampleErrorLabel() {
 	testapp.Run("error-label", func(app *gtk.Application) {
+		adaptive.Init()
+
 		err := errors.New("failed to open hello.txt: filesystem error: missing hard drive")
 
 		status := adaptive.NewErrorLabel(err)

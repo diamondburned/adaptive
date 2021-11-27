@@ -11,6 +11,8 @@ import (
 
 func ExampleFold() {
 	testapp.Run("fold", func(app *gtk.Application) {
+		adaptive.Init()
+
 		stack := newStack()
 		stack.SetHExpand(true)
 

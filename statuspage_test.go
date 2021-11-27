@@ -8,6 +8,8 @@ import (
 
 func ExampleStatusPage() {
 	testapp.Run("status-page", func(app *gtk.Application) {
+		adaptive.Init()
+
 		status := adaptive.NewStatusPage()
 		status.SetIconName("computer-fail-symbolic")
 		status.SetTitle("Uh oh!")

@@ -14,9 +14,9 @@ import (
 //go:embed style.css
 var styleCSS string
 
-func init() {
-	gtk.Init()
-
+// Init initializes package adaptive. The caller should call this on application
+// activation.
+func Init() {
 	css := gtk.NewCSSProvider()
 	css.Connect("parsing-error", func(section *gtk.CSSSection, err error) {
 		loc := section.StartLocation()

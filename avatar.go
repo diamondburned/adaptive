@@ -54,6 +54,11 @@ func NewAvatar(size int) *Avatar {
 		initialsFunc: TransformInitials,
 	}
 
+	avatar.Image.SetOverflow(gtk.OverflowHidden)
+	avatar.Label.SetOverflow(gtk.OverflowHidden)
+
+	avatar.SetHExpand(false)
+	avatar.SetVExpand(false)
 	avatar.SetHAlign(gtk.AlignCenter)
 	avatar.SetVAlign(gtk.AlignCenter)
 	avatar.SetSizeRequest(size)

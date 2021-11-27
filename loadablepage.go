@@ -28,8 +28,10 @@ func NewLoadablePage() *LoadablePage {
 	p.ErrorPage.SetIconName("dialog-error-symbolic")
 
 	p.content = NewBin()
+	p.content.AddCSSClass("adaptive-loadablepage-content")
 
 	p.Stack = gtk.NewStack()
+	p.Stack.AddCSSClass("adaptive-loadablepage")
 	p.Stack.AddChild(p.Spinner)
 	p.Stack.AddChild(p.ErrorPage)
 	p.Stack.AddChild(p.content)
@@ -60,8 +62,7 @@ func (p *LoadablePage) SetLoading() {
 
 // SetChild sets the main child of the busy box.
 func (p *LoadablePage) SetChild(child gtk.Widgetter) {
-	p.content.SetChild(nil)
 	p.Spinner.Stop()
-	p.content.Append(child)
+	p.content.SetChild(child)
 	p.SetVisibleChild(p.content)
 }
