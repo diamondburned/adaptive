@@ -160,6 +160,7 @@ func NewFold(position gtk.PositionType) *Fold {
 
 	f.Widgetter = f.overlay
 	f.bind()
+	f.updateLayout()
 
 	// Bind handlers that will blur the content box if the revealer is over it.
 	f.NotifyFolded(func(folded bool) { f.updateState() })
