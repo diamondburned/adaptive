@@ -63,7 +63,7 @@ func (b *FoldRevealButton) ConnectFold(fold *Fold) {
 
 // Fold is a component that acts similar to libadwaita's AdwFlap.
 type Fold struct {
-	gtk.Widgetter
+	*gtk.Widget
 	overlay *gtk.Overlay
 	main    *gtk.Box
 
@@ -159,7 +159,7 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.overlay.AddCSSClass("adaptive-sidebar")
 	f.overlay.SetVExpand(true)
 
-	f.Widgetter = f.overlay
+	f.Widget = gtk.BaseWidget(f.overlay)
 	f.funcWidth = f.overlay.AllocatedWidth
 	f.bind()
 	f.updateLayout()
