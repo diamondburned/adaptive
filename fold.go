@@ -72,7 +72,8 @@ type Fold struct {
 	sidebox    *Bin
 	contentbox *gtk.Overlay
 
-	onFold func(bool)
+	onFold    func(bool)
+	funcWidth func() int
 
 	fpos   gtk.PositionType
 	fthres int
@@ -159,6 +160,7 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.overlay.SetVExpand(true)
 
 	f.Widgetter = f.overlay
+	f.funcWidth = f.overlay.AllocatedWidth
 	f.bind()
 	f.updateLayout()
 
@@ -197,6 +199,12 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.overlay.AddController(swiper)
 
 	return f
+}
+
+// SetWidthFunc sets the function to get the width to determine the fold
+// threshold.
+func (f *Fold) SetWidthFunc(widthFunc func() int) {
+	f.funcWidth = widthFunc
 }
 
 // SetFoldThreshold sets the width threshold that the sidebar will determine
@@ -310,7 +318,7 @@ func (f *Fold) bind() {
 
 	// Hack to resize the first time the widget has a size.
 	w.AddTickCallback(func(gtk.Widgetter, gdk.FrameClocker) bool {
-		if w.AllocatedWidth() > 0 {
+		if f.funcWidth() > 0 {
 			f.updateLayout()
 			return false
 		}
@@ -332,7 +340,7 @@ func (f *Fold) bind() {
 }
 
 func (f *Fold) updateLayout() {
-	if f.fthres <= f.overlay.AllocatedWidth() {
+	if f.fthres <= f.funcWidth() {
 		f.doUnfold()
 	} else {
 		f.doFold()
