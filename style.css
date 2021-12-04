@@ -1,11 +1,16 @@
 .adaptive-sidebar-revealer {
 	background: @theme_base_color;
-	box-shadow: 0 0 25px 0 alpha(black, 0.15);
+	transition-duration: 100ms;
+	transition-property: box-shadow;
 }
 
 .adaptive-sidebar-folded > box {
 	transition-duration: 100ms;
 	transition-property: filter;
+}
+
+.adaptive-sidebar-folded.adaptive-sidebar-open .adaptive-sidebar-revealer {
+	box-shadow: 0 0 25px 0 alpha(black, 0.15);
 }
 
 .adaptive-sidebar-dimming,
