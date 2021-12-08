@@ -61,6 +61,46 @@ func (b *FoldRevealButton) ConnectFold(fold *Fold) {
 	})
 }
 
+// BindFolds binds the given folds to have synchronized fold and reveal states.
+// The first fold is used as the basis for the width.
+func BindFolds(folds ...*Fold) {
+	for _, fold := range folds[1:] {
+		fold.SetShouldFoldFunc(func() bool { return folds[0].fold })
+	}
+
+	folds[0].NotifyFolded(func(bool) {
+		for _, fold := range folds[1:] {
+			fold.updateLayout()
+		}
+	})
+
+	var mutex bool
+	do := func(f func()) {
+		if !mutex {
+			mutex = true
+			f()
+			mutex = false
+		}
+	}
+
+	// We need to do this because we want to unreveal everything if even one
+	// fold gets collapsed.
+	for i := range folds {
+		i := i
+		folds[i].NotifyRevealed(func(revealed bool) {
+			do(func() {
+				for j, fold := range folds {
+					if i == j {
+						continue
+					}
+					fold.reveal = revealed
+					fold.doRevealSide()
+				}
+			})
+		})
+	}
+}
+
 // Fold is a component that acts similar to libadwaita's AdwFlap.
 type Fold struct {
 	*gtk.Widget
@@ -72,8 +112,8 @@ type Fold struct {
 	sidebox    *Bin
 	contentbox *gtk.Overlay
 
-	onFold    func(bool)
-	funcWidth func() int
+	onFold     func(bool)
+	shouldFold func() bool
 
 	fpos   gtk.PositionType
 	fthres int
@@ -160,7 +200,7 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.overlay.SetVExpand(true)
 
 	f.Widget = gtk.BaseWidget(f.overlay)
-	f.funcWidth = f.overlay.AllocatedWidth
+	f.shouldFold = func() bool { return f.overlay.AllocatedWidth() < f.fthres }
 	f.bind()
 	f.updateLayout()
 
@@ -204,7 +244,13 @@ func NewFold(position gtk.PositionType) *Fold {
 // SetWidthFunc sets the function to get the width to determine the fold
 // threshold.
 func (f *Fold) SetWidthFunc(widthFunc func() int) {
-	f.funcWidth = widthFunc
+	f.shouldFold = func() bool { return widthFunc() < f.fthres }
+}
+
+// SetShouldFoldFunc sets the callback to determine whether or not fold should
+// be folded. It overrides SetWidthFunc.
+func (f *Fold) SetShouldFoldFunc(shouldFold func() bool) {
+	f.shouldFold = shouldFold
 }
 
 // SetFoldThreshold sets the width threshold that the sidebar will determine
@@ -245,11 +291,7 @@ func (f *Fold) SetChild(child gtk.Widgetter) {
 
 // SetFolded sets whether or not the sidebar is folded.
 func (f *Fold) SetFolded(folded bool) {
-	if folded {
-		f.doFold()
-	} else {
-		f.doUnfold()
-	}
+	f.setFold(folded)
 }
 
 // SetRevealSide sets whether or not the sidebar is revealed. It does not
@@ -318,7 +360,7 @@ func (f *Fold) bind() {
 
 	// Hack to resize the first time the widget has a size.
 	w.AddTickCallback(func(gtk.Widgetter, gdk.FrameClocker) bool {
-		if f.funcWidth() > 0 {
+		if f.AllocatedWidth() > 0 {
 			f.updateLayout()
 			return false
 		}
@@ -340,11 +382,7 @@ func (f *Fold) bind() {
 }
 
 func (f *Fold) updateLayout() {
-	if f.fthres <= f.funcWidth() {
-		f.doUnfold()
-	} else {
-		f.doFold()
-	}
+	f.setFold(f.shouldFold())
 }
 
 func (f *Fold) updateState() {
@@ -363,36 +401,29 @@ func (f *Fold) updateState() {
 	}
 }
 
-func (f *Fold) doFold() {
-	if f.fold {
+func (f *Fold) setFold(fold bool) {
+	if f.fold == fold {
 		return
 	}
-	f.fold = true
+	f.fold = fold
 
-	f.main.Remove(f.siderev)
-	f.overlay.AddOverlay(f.siderev)
-	f.overlay.SetMeasureOverlay(f.siderev, true)
+	if fold {
+		f.main.Remove(f.siderev)
+		f.overlay.AddOverlay(f.siderev)
+		f.overlay.SetMeasureOverlay(f.siderev, true)
 
-	f.doRevealSide()
-	f.updateState()
-	f.notifyFolded()
-}
+		f.doRevealSide()
+		f.notifyFolded()
+	} else {
+		f.overlay.RemoveOverlay(f.siderev)
+		switch f.fpos {
+		case gtk.PosLeft:
+			f.main.Prepend(f.siderev)
+		case gtk.PosRight:
+			f.main.Append(f.siderev)
+		}
 
-func (f *Fold) doUnfold() {
-	if !f.fold {
-		return
+		f.doRevealSide()
+		f.notifyFolded()
 	}
-	f.fold = false
-
-	f.overlay.RemoveOverlay(f.siderev)
-	switch f.fpos {
-	case gtk.PosLeft:
-		f.main.Prepend(f.siderev)
-	case gtk.PosRight:
-		f.main.Append(f.siderev)
-	}
-
-	f.doRevealSide()
-	f.updateState()
-	f.notifyFolded()
 }
