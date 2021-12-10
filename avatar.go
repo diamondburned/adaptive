@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/gdkpixbuf/v2"
@@ -18,16 +19,43 @@ func TransformInitials(in string) string {
 		return ""
 	}
 
-	r := []rune(in)
+	runes := []rune(in)
 
-	b := strings.Builder{}
-	b.Grow(len(in))
-	b.WriteRune(r[0])
-
-	for _, r := range r[1:] {
+	for _, r := range runes {
 		if unicode.IsUpper(r) {
+			return transformInitialsCap(runes)
+		}
+	}
+
+	return transformInitials(runes)
+}
+
+func transformInitialsCap(runes []rune) string {
+	return runesMap(runes, 2, func(r rune) rune {
+		if unicode.IsUpper(r) {
+			return r
+		}
+		return -1
+	})
+}
+
+func transformInitials(runes []rune) string {
+	return runesMap(runes, 1, func(r rune) rune {
+		if unicode.IsLetter(r) {
+			return r
+		}
+		return -1
+	})
+}
+
+func runesMap(runes []rune, until int, f func(rune) rune) string {
+	b := strings.Builder{}
+	b.Grow(until * utf8.UTFMax)
+
+	for i, l := 0, 0; i < len(runes) && l < until; i++ {
+		if r := f(runes[i]); r > -1 {
+			l++
 			b.WriteRune(r)
-			break
 		}
 	}
 
