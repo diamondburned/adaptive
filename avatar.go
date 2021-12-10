@@ -20,8 +20,6 @@ func TransformInitials(in string) string {
 		return ""
 	}
 
-	log.Printf("transform %q", in)
-
 	runes := []rune(in)
 
 	for _, r := range runes {
