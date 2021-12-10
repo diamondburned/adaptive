@@ -9,6 +9,7 @@ import (
 
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/gdkpixbuf/v2"
+	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 	"github.com/diamondburned/gotk4/pkg/pango"
 )
@@ -18,6 +19,8 @@ func TransformInitials(in string) string {
 	if in == "" {
 		return ""
 	}
+
+	log.Printf("transform %q", in)
 
 	runes := []rune(in)
 
@@ -144,15 +147,47 @@ func (a *Avatar) SetInitialsTransformer(initialsFn func(string) string) {
 	a.initialsFunc = initialsFn
 }
 
+// ConnectLabel connects the Avatar's initials field to the Label's visible
+// text.
+func (a *Avatar) ConnectLabel(l *gtk.Label) func() {
+	var id glib.SignalHandle
+	onMapped := func() {
+		f := func() {
+			a.SetInitials(l.Text())
+		}
+		id = l.Connect("notify::label", f)
+		f()
+	}
+
+	if a.Mapped() {
+		onMapped()
+	}
+
+	id1 := a.ConnectMap(onMapped)
+	id2 := a.ConnectUnmap(func() {
+		l.HandlerDisconnect(id)
+		id = 0
+	})
+
+	return func() {
+		a.HandlerDisconnect(id1)
+		a.HandlerDisconnect(id2)
+
+		if id > 0 {
+			l.HandlerDisconnect(id)
+			id = 0
+		}
+	}
+}
+
 // Initials returns the full initials string.
-func (i *Avatar) Initials() string {
-	return i.Label.Text()
+func (a *Avatar) Initials() string {
+	return a.Label.Text()
 }
 
 // SetInitials sets the string to be displayed as initials.
 func (a *Avatar) SetInitials(initials string) {
 	a.Label.SetText(a.initialsFunc(initials))
-	a.Label.SetTooltipText(initials)
 
 	var hasImage bool
 	switch t := a.Image.StorageType(); t {
