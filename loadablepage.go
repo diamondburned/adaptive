@@ -16,8 +16,8 @@ type LoadablePage struct {
 func NewLoadablePage() *LoadablePage {
 	p := &LoadablePage{}
 	p.Spinner = gtk.NewSpinner()
-	p.Spinner.SetVExpand(true)
-	p.Spinner.SetHExpand(true)
+	p.Spinner.SetVExpand(false)
+	p.Spinner.SetHExpand(false)
 	p.Spinner.SetVAlign(gtk.AlignCenter)
 	p.Spinner.SetHAlign(gtk.AlignCenter)
 	p.Spinner.SetSizeRequest(24, 24)
