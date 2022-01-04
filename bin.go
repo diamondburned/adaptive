@@ -1,19 +1,20 @@
 package adaptive
 
-import "github.com/diamondburned/gotk4/pkg/gtk/v4"
+import (
+	"github.com/diamondburned/gotk4/pkg/core/glib"
+	"github.com/diamondburned/gotk4/pkg/gtk/v4"
+)
 
 // Bin is a widget that holds a single widget.
 type Bin struct {
 	*gtk.Box
-	child gtk.Widgetter
+	child *gtk.Widget
 }
 
 // NewBin creates a new bin.
 func NewBin() *Bin {
 	box := gtk.NewBox(gtk.OrientationVertical, 0)
-	box.SetHomogeneous(true)
-	box.SetHExpand(true)
-	box.SetVExpand(true)
+	box.SetLayoutManager(gtk.NewBinLayout())
 	return &Bin{box, nil}
 }
 
@@ -22,12 +23,15 @@ func (b *Bin) SetChild(child gtk.Widgetter) {
 	if child == b.child {
 		return
 	}
+
 	if b.child != nil {
-		b.Remove(b.child)
+		b.child.Unparent()
+		b.child = nil
 	}
-	b.child = child
+
 	if child != nil {
-		b.Append(child)
+		b.child = gtk.BaseWidget(child)
+		b.child.SetParent(b)
 	}
 }
 
@@ -38,5 +42,5 @@ func (b *Bin) Child() gtk.Widgetter {
 
 // IsChild returns true if the given child is the bin's child.
 func (b *Bin) IsChild(child gtk.Widgetter) bool {
-	return b.child == child
+	return glib.ObjectEq(b.child, child)
 }

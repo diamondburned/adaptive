@@ -2,7 +2,7 @@ module github.com/diamondburned/adaptive
 
 go 1.17
 
-require github.com/diamondburned/gotk4/pkg v0.0.0-20211121095826-148e5d6f3165
+require github.com/diamondburned/gotk4/pkg v0.0.0-20211231035909-9969b912d153
 
 require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20201222180813-1025295fd063 // indirect
