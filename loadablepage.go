@@ -122,13 +122,13 @@ func (p *LoadablePage) SetLoading() {
 // box. If the button is clicked, then it's no longer clickable, and the
 // returned context is interrupted. It does nothing more, and the user must call
 // either SetChild or SetError to continue.
-func (p *LoadablePage) SetCancellableLoading() context.Context {
+func (p *LoadablePage) SetCancellableLoading(ctx context.Context) context.Context {
 	p.SetLoading()
 
 	p.StopButton.SetVisible(true)
 	p.StopButton.SetSensitive(true)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	p.cancel = cancel
 
 	return ctx
