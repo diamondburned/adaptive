@@ -2,6 +2,7 @@ package adaptive_test
 
 import (
 	"errors"
+	"time"
 
 	"github.com/diamondburned/adaptive"
 	"github.com/diamondburned/adaptive/internal/testapp"
@@ -26,27 +27,41 @@ func ExampleLoadablePage() {
 		child.SetMarginBottom(margin)
 		child.SetMarginStart(margin)
 		child.SetMarginEnd(margin)
+		child.SetHAlign(gtk.AlignCenter)
+		child.SetVAlign(gtk.AlignCenter)
+		child.SetSizeRequest(250, -1)
 		child.Append(errorCheck)
 		child.Append(loadButton)
 
 		main := adaptive.NewLoadablePage()
+		main.SetHExpand(true)
 		main.SetChild(child)
+		main.SetRetryFunc(func() { main.SetChild(child) })
 
 		loadButton.ConnectClicked(func() {
 			erroneous := errorCheck.Active()
-			main.SetLoading()
 
-			glib.TimeoutSecondsAdd(5, func() {
-				if erroneous {
-					main.SetError(errors.New("failed to load busy box: checkmark was active"))
-				} else {
-					main.SetChild(child)
+			ctx := main.SetCancellableLoading()
+
+			go func() {
+				select {
+				case <-ctx.Done():
+					glib.IdleAdd(func() { main.SetError(ctx.Err()) })
+				case <-time.After(2 * time.Second):
+					glib.IdleAdd(func() {
+						if erroneous {
+							main.SetError(errors.New("failed to load busy box: checkmark was active"))
+						} else {
+							main.SetChild(child)
+						}
+					})
 				}
-			})
+			}()
 		})
 
 		w := testapp.NewWindow(app, "Loadable", 250, -1)
 		w.SetChild(main)
+		w.SetDefaultSize(300, 450)
 		w.Show()
 	})
 	// Output:

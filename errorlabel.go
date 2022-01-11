@@ -117,6 +117,12 @@ func expandError(err error) string {
 		b.WriteString(strings.Repeat("    ", i))
 		b.WriteString("└ ")
 		b.WriteString(capitalize(part))
+
+		if i == len(parts)-1 {
+			b.WriteByte('.')
+		} else {
+			b.WriteByte(':')
+		}
 	}
 
 	return b.String()

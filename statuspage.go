@@ -28,8 +28,8 @@ func NewStatusPage() *StatusPage {
 	page.Title.SetSingleLineMode(true)
 
 	page.Grid = gtk.NewGrid()
-	page.Grid.SetHExpand(true)
-	page.Grid.SetVExpand(true)
+	page.Grid.SetHExpand(false)
+	page.Grid.SetVExpand(false)
 	page.Grid.SetHAlign(gtk.AlignCenter)
 	page.Grid.SetVAlign(gtk.AlignCenter)
 	page.Grid.AddCSSClass("adaptive-statuspage")
@@ -38,14 +38,17 @@ func NewStatusPage() *StatusPage {
 }
 
 func (p *StatusPage) ensureIcon() {
+	p.Grid.RemoveRow(0)
 	p.Grid.Attach(p.Icon, 0, 0, 1, 1)
 }
 
 func (p *StatusPage) ensureTitle() {
+	p.Grid.RemoveRow(1)
 	p.Grid.Attach(p.Title, 0, 1, 1, 1)
 }
 
 func (p *StatusPage) ensureDescription(desc gtk.Widgetter) {
+	p.Grid.RemoveRow(2)
 	p.Grid.Attach(desc, 0, 2, 1, 1)
 }
 
