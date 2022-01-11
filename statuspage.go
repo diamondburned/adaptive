@@ -57,10 +57,7 @@ func (p *StatusPage) ensureDescription(desc gtk.Widgetter) {
 // SetTitle ensures the title is in the page and sets its content.
 func (p *StatusPage) SetTitle(title string) {
 	if title == "" {
-		if p.Title != nil {
-			p.Grid.Remove(p.Title)
-			p.Title = nil
-		}
+		p.Title.Hide()
 		return
 	}
 
@@ -95,10 +92,7 @@ func (p *StatusPage) SetDescriptionText(desc string) {
 // SetIconName ensures the icon is in the page and sets its icon name.
 func (p *StatusPage) SetIconName(icon string) {
 	if icon == "" {
-		if p.Icon != nil {
-			p.Grid.Remove(p.Icon)
-			p.Icon = nil
-		}
+		p.Icon.Hide()
 		return
 	}
 
