@@ -16,35 +16,37 @@ type StatusPage struct {
 // NewStatusPage creates a new empty status page. All its widgets are properly
 // initialized, but they're not added into the box until set.
 func NewStatusPage() *StatusPage {
-	page := &StatusPage{}
+	p := &StatusPage{}
 
-	page.Icon = gtk.NewImage()
-	page.Icon.SetIconSize(gtk.IconSizeLarge)
-	page.Icon.AddCSSClass("adaptive-statuspage-icon")
+	p.Icon = gtk.NewImage()
+	p.Icon.Hide()
+	p.Icon.SetIconSize(gtk.IconSizeLarge)
+	p.Icon.AddCSSClass("adaptive-statuspage-icon")
 
-	page.Title = gtk.NewLabel("")
-	page.Title.AddCSSClass("adaptive-statuspage-title")
-	page.Title.SetEllipsize(pango.EllipsizeEnd)
-	page.Title.SetSingleLineMode(true)
+	p.Title = gtk.NewLabel("")
+	p.Title.AddCSSClass("adaptive-statuspage-title")
+	p.Title.Hide()
+	p.Title.SetEllipsize(pango.EllipsizeEnd)
+	p.Title.SetSingleLineMode(true)
 
-	page.Grid = gtk.NewGrid()
-	page.Grid.SetHExpand(false)
-	page.Grid.SetVExpand(false)
-	page.Grid.SetHAlign(gtk.AlignCenter)
-	page.Grid.SetVAlign(gtk.AlignCenter)
-	page.Grid.AddCSSClass("adaptive-statuspage")
+	p.Grid = gtk.NewGrid()
+	p.Grid.AddCSSClass("adaptive-statuspage")
+	p.Grid.SetHExpand(false)
+	p.Grid.SetVExpand(false)
+	p.Grid.SetHAlign(gtk.AlignCenter)
+	p.Grid.SetVAlign(gtk.AlignCenter)
+	p.Grid.Attach(p.Icon, 0, 0, 1, 1)
+	p.Grid.Attach(p.Title, 0, 1, 1, 1)
 
-	return page
+	return p
 }
 
 func (p *StatusPage) ensureIcon() {
-	p.Grid.RemoveRow(0)
-	p.Grid.Attach(p.Icon, 0, 0, 1, 1)
+	p.Icon.Show()
 }
 
 func (p *StatusPage) ensureTitle() {
-	p.Grid.RemoveRow(1)
-	p.Grid.Attach(p.Title, 0, 1, 1, 1)
+	p.Title.Show()
 }
 
 func (p *StatusPage) ensureDescription(desc gtk.Widgetter) {

@@ -11,8 +11,8 @@ func ExampleStatusPage() {
 		adaptive.Init()
 
 		status := adaptive.NewStatusPage()
-		status.SetIconName("computer-fail-symbolic")
 		status.SetTitle("Uh oh!")
+		status.SetIconName("computer-fail-symbolic")
 		status.SetDescriptionText("An oopsie-whoopsie has occured. Please throw your computer out the window.")
 
 		w := testapp.NewWindow(app, "Status Page", 350, 200)

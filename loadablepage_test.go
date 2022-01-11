@@ -1,6 +1,7 @@
 package adaptive_test
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -41,7 +42,7 @@ func ExampleLoadablePage() {
 		loadButton.ConnectClicked(func() {
 			erroneous := errorCheck.Active()
 
-			ctx := main.SetCancellableLoading()
+			ctx := main.SetCancellableLoading(context.Background())
 
 			go func() {
 				select {
