@@ -80,6 +80,14 @@ func NewLoadablePage() *LoadablePage {
 	p.Stack.SetVisibleChild(p.loading)
 	p.Stack.SetTransitionType(gtk.StackTransitionTypeCrossfade)
 
+	p.ConnectUnmap(func() {
+		// Ensure that the context is always closed.
+		if p.cancel != nil {
+			p.cancel()
+			p.cancel = nil
+		}
+	})
+
 	return p
 }
 
@@ -92,7 +100,6 @@ func (p *LoadablePage) SetError(err error) {
 // new ErrorLabel.
 func (p *LoadablePage) SetErrorWidget(w gtk.Widgetter) {
 	p.ensureFresh()
-	// p.content.SetChild(nil)
 
 	p.ErrorPage.SetDescription(w)
 	p.RetryButton.SetVisible(p.retry != nil)
@@ -111,7 +118,6 @@ func (p *LoadablePage) SetRetryFunc(fn func()) {
 // SetLoading shows a loading animation in the loadable page.
 func (p *LoadablePage) SetLoading() {
 	p.ensureFresh()
-	// p.content.SetChild(nil)
 
 	p.Spinner.Start()
 	p.SetVisibleChild(p.loading)
