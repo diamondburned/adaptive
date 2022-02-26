@@ -372,7 +372,7 @@ func (f *Fold) bind() {
 		// TODO: this doesn't cover the page where the inside is changed without
 		// the window being resized. It might be worth it to have a slow path
 		// that checks the width and updates the size every 1000/30ms or so.
-		surface = gdk.BaseSurface(w.GetNative().Surface())
+		surface = gdk.BaseSurface(w.Native().Surface())
 		handle = surface.Connect("notify::width", func() { f.updateLayout() })
 	})
 	w.ConnectUnrealize(func() {
