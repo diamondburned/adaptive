@@ -91,9 +91,17 @@ func NewLoadablePage() *LoadablePage {
 	return p
 }
 
-// SetError shows an error in the loadable page.
+// SetError shows an error in the loadable page. If err == nil, then the content
+// page is shown, but that behavior is only useful if SetChild has been called
+// at least once before.
 func (p *LoadablePage) SetError(err error) {
-	p.SetErrorWidget(NewErrorLabel(err))
+	if err != nil {
+		p.SetErrorWidget(NewErrorLabel(err))
+		return
+	}
+
+	p.ensureFresh()
+	p.SetVisibleChild(p.content)
 }
 
 // SetErrorWidget is like SetError, except the given widget is set instead of a
