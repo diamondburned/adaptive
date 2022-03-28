@@ -114,14 +114,21 @@ func expandError(err error) string {
 		if i > 0 {
 			b.WriteString("\n")
 		}
+
 		b.WriteString(strings.Repeat("    ", i))
 		b.WriteString("└ ")
+
+		part = strings.TrimSpace(part)
 		b.WriteString(capitalize(part))
 
 		if i == len(parts)-1 {
-			b.WriteByte('.')
+			if !strings.HasSuffix(part, ".") {
+				b.WriteByte('.')
+			}
 		} else {
-			b.WriteByte(':')
+			if !strings.HasSuffix(part, ":") {
+				b.WriteByte(':')
+			}
 		}
 	}
 
