@@ -27,6 +27,6 @@ func Init() {
 	})
 	css.LoadFromData(styleCSS)
 
-	gtk.StyleContextAddProviderForDisplay(
-		gdk.DisplayGetDefault(), css, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+	// lower priority than APPLICATION
+	gtk.StyleContextAddProviderForDisplay(gdk.DisplayGetDefault(), css, 500)
 }
