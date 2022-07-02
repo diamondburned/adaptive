@@ -375,6 +375,7 @@ func (f *Fold) bind() {
 		surface = gdk.BaseSurface(w.Native().Surface())
 		handle = surface.Connect("notify::width", func() { f.updateLayout() })
 	})
+
 	w.ConnectUnrealize(func() {
 		surface.HandlerDisconnect(handle)
 		surface = nil
