@@ -1,0 +1,79 @@
+package adaptive
+
+import "github.com/diamondburned/gotk4/pkg/gtk/v4"
+
+// Clamp is a container widget that constraints a dimension of its child.
+type Clamp struct {
+	gtk.Widgetter
+	layout *clampLayout
+}
+
+// NewClamp creates a new Clamp. If orientation is Horizontal, then the width
+// is constrained. If orientation is Vertical, then the height is constrained.
+func NewClamp(orientation gtk.Orientation, max int) *Clamp {
+	layout := &clampLayout{
+		max:         max,
+		orientation: orientation,
+	}
+
+	box := gtk.NewBox(orientation, 0)
+	box.AddCSSClass("adaptive-clamp")
+	SetCustomLayout(box, layout)
+
+	return &Clamp{box, layout}
+}
+
+// SetChild sets the child to be clamped.
+func (c *Clamp) SetChild(child gtk.Widgetter) {
+	box := c.Widgetter.(*gtk.Box)
+	if child := box.FirstChild(); child != nil {
+		box.Remove(child)
+	}
+	box.Append(child)
+}
+
+type clampLayout struct {
+	max         int
+	orientation gtk.Orientation
+}
+
+func (l *clampLayout) RequestMode(w gtk.Widgetter) gtk.SizeRequestMode {
+	switch l.orientation {
+	case gtk.OrientationHorizontal:
+		return gtk.SizeRequestHeightForWidth
+	case gtk.OrientationVertical:
+		return gtk.SizeRequestWidthForHeight
+	default:
+		panic("unreachable")
+	}
+}
+
+func (l *clampLayout) Measure(w gtk.Widgetter, o gtk.Orientation, forSize int) (min, nat, minBaseline, natBaseline int) {
+	base := gtk.BaseWidget(w)
+
+	min, nat, minBaseline, natBaseline = base.Measure(o, forSize)
+	if nat > l.max {
+		nat = l.max
+	}
+	if min > nat {
+		nat = min
+	}
+
+	return
+}
+
+func (l *clampLayout) Allocate(w gtk.Widgetter, width, height, baseline int) {
+	switch l.orientation {
+	case gtk.OrientationHorizontal:
+		if width > l.max {
+			width = l.max
+		}
+	case gtk.OrientationVertical:
+		if height > l.max {
+			height = l.max
+		}
+	}
+
+	base := gtk.BaseWidget(w)
+	base.Allocate(width, height, baseline, nil)
+}

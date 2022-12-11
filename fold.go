@@ -7,6 +7,8 @@ import (
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
+
+	coreglib "github.com/diamondburned/gotk4/pkg/core/glib"
 )
 
 // FoldRevealButtonIcon is the default icon name for a fold reveal button.
@@ -103,9 +105,11 @@ func BindFolds(folds ...*Fold) {
 
 // Fold is a component that acts similar to libadwaita's AdwFlap.
 type Fold struct {
-	*gtk.Widget
-	overlay *gtk.Overlay
-	main    *gtk.Box
+	gtk.Widget
+	Position coreglib.Property[gtk.PositionType] `glib:"position"`
+
+	parent *gtk.Overlay
+	main   *gtk.Box
 
 	dimming    *gtk.Box
 	siderev    *gtk.Revealer
@@ -122,6 +126,30 @@ type Fold struct {
 	fold   bool
 	reveal bool
 }
+
+var foldType = coreglib.RegisterSubclassWithConstructor(
+	func() *Fold {
+		return &Fold{
+			fthres: defaultFoldThreshold,
+			fwidth: defaultFoldWidth,
+		}
+	},
+	coreglib.WithOverride(func(f *Fold) gtk.WidgetOverrides {
+		return gtk.WidgetOverrides{
+			SizeAllocate: f.sizeAllocate,
+		}
+	}),
+	coreglib.WithOverrides(func(f *Fold) coreglib.ObjectOverrides {
+		return coreglib.ObjectOverrides{
+			Init:    f.init,
+			Dispose: f.dispose,
+		}
+	}),
+	coreglib.WithClassInit(func(class *gtk.WidgetClass) {
+		class.SetCSSName("fold")
+		class.SetLayoutManagerType(gtk.GTypeBinLayout)
+	}),
+)
 
 // Fold threshold constants that determine when swiping velocities should be
 // handled.
@@ -143,12 +171,13 @@ const (
 
 // NewFold creates a new sidebar.
 func NewFold(position gtk.PositionType) *Fold {
-	f := &Fold{
-		fpos:   position,
-		fthres: defaultFoldThreshold,
-		fwidth: defaultFoldWidth,
-		fold:   false,
-	}
+	return foldType.NewWithProperties(map[string]any{
+		"position": position,
+	})
+}
+
+func (f *Fold) init() {
+	f.fold = false
 
 	f.sidebox = NewBin()
 	f.sidebox.SetSizeRequest(f.fwidth, -1)
@@ -179,7 +208,7 @@ func NewFold(position gtk.PositionType) *Fold {
 	f.main = gtk.NewBox(gtk.OrientationHorizontal, 0)
 	f.main.SetVExpand(true)
 
-	switch position {
+	switch pos := f.Position.Get(); pos {
 	case gtk.PosLeft:
 		f.siderev.SetHAlign(gtk.AlignStart)
 		f.siderev.SetTransitionType(gtk.RevealerTransitionTypeSlideRight)
@@ -191,16 +220,16 @@ func NewFold(position gtk.PositionType) *Fold {
 		f.main.Append(f.contentbox)
 		f.main.Append(f.siderev)
 	default:
-		log.Panicln("invalid position given:", position)
+		log.Panicln("invalid position given:", pos)
 	}
 
-	f.overlay = gtk.NewOverlay()
-	f.overlay.SetChild(f.main)
-	f.overlay.AddCSSClass("adaptive-sidebar")
-	f.overlay.SetVExpand(true)
+	f.parent = gtk.NewOverlay()
+	f.parent.SetChild(f.main)
+	f.parent.AddCSSClass("adaptive-sidebar")
+	f.parent.SetVExpand(true)
+	f.parent.SetParent(f)
 
-	f.Widget = gtk.BaseWidget(f.overlay)
-	f.shouldFold = func() bool { return f.overlay.AllocatedWidth() < f.fthres }
+	f.shouldFold = func() bool { return f.parent.AllocatedWidth() < f.fthres }
 	f.bind()
 	f.updateLayout()
 
@@ -236,9 +265,19 @@ func NewFold(position gtk.PositionType) *Fold {
 			f.siderev.SetRevealChild(velX > 0)
 		}
 	})
-	f.overlay.AddController(swiper)
+	f.parent.AddController(swiper)
+}
 
-	return f
+func (f *Fold) dispose() {
+	f.parent.Unparent()
+}
+
+func (f *Fold) sizeAllocate(w, h, baseline int) {
+	log.Println(w, h)
+	f.updateLayout()
+
+	class := coreglib.ParentOverrides[gtk.WidgetOverrides]()
+	class.SizeAllocate(w, h, baseline)
 }
 
 // SetWidthFunc sets the function to get the width to determine the fold
@@ -337,9 +376,9 @@ func (f *Fold) NotifyFolded(fn func(folded bool)) {
 
 func (f *Fold) notifyFolded() {
 	if f.fold {
-		f.overlay.AddCSSClass("adaptive-sidebar-folded")
+		f.parent.AddCSSClass("adaptive-sidebar-folded")
 	} else {
-		f.overlay.RemoveCSSClass("adaptive-sidebar-folded")
+		f.parent.RemoveCSSClass("adaptive-sidebar-folded")
 	}
 	if f.onFold != nil {
 		f.onFold(f.fold)
@@ -356,7 +395,7 @@ func (f *Fold) bind() {
 	var handle glib.SignalHandle
 	var surface *gdk.Surface
 
-	w := f.overlay
+	w := f.parent
 
 	// Hack to resize the first time the widget has a size.
 	w.AddTickCallback(func(gtk.Widgetter, gdk.FrameClocker) bool {
@@ -396,9 +435,9 @@ func (f *Fold) updateState() {
 	f.dimming.SetVisible(f.fold)
 
 	if reveal {
-		f.overlay.AddCSSClass("adaptive-sidebar-open")
+		f.parent.AddCSSClass("adaptive-sidebar-open")
 	} else {
-		f.overlay.RemoveCSSClass("adaptive-sidebar-open")
+		f.parent.RemoveCSSClass("adaptive-sidebar-open")
 	}
 }
 
@@ -410,13 +449,13 @@ func (f *Fold) setFold(fold bool) {
 
 	if fold {
 		f.main.Remove(f.siderev)
-		f.overlay.AddOverlay(f.siderev)
-		f.overlay.SetMeasureOverlay(f.siderev, true)
+		f.parent.AddOverlay(f.siderev)
+		f.parent.SetMeasureOverlay(f.siderev, true)
 
 		f.doRevealSide()
 		f.notifyFolded()
 	} else {
-		f.overlay.RemoveOverlay(f.siderev)
+		f.parent.RemoveOverlay(f.siderev)
 		switch f.fpos {
 		case gtk.PosLeft:
 			f.main.Prepend(f.siderev)

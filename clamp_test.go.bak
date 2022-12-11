@@ -1,0 +1,31 @@
+package adaptive_test
+
+import (
+	"strings"
+
+	"github.com/diamondburned/adaptive"
+	"github.com/diamondburned/adaptive/internal/testapp"
+	"github.com/diamondburned/gotk4/pkg/gtk/v4"
+)
+
+func ExampleClamp() {
+	testapp.Run("clamp", func(app *gtk.Application) {
+		adaptive.Init()
+
+		text := gtk.NewTextView()
+		text.SetWrapMode(gtk.WrapWordChar)
+		text.Buffer().SetText(strings.Repeat("abab ", 250))
+
+		scroll := gtk.NewScrolledWindow()
+		scroll.SetPolicy(gtk.PolicyNever, gtk.PolicyAutomatic)
+		scroll.SetChild(text)
+
+		clamp := adaptive.NewClamp(gtk.OrientationHorizontal, 300)
+		clamp.SetChild(scroll)
+
+		w := testapp.NewWindow(app, "Error", 400, 350)
+		w.SetChild(clamp)
+		w.Show()
+	})
+	// Output:
+}
