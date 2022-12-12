@@ -8,7 +8,7 @@ import (
 // Bin is a widget that holds a single widget.
 type Bin struct {
 	*gtk.Box
-	child *gtk.Widget
+	child gtk.Widgetter
 }
 
 // NewBin creates a new bin.
@@ -25,13 +25,12 @@ func (b *Bin) SetChild(child gtk.Widgetter) {
 	}
 
 	if b.child != nil {
-		b.child.Unparent()
-		b.child = nil
+		b.Box.Remove(b.child)
 	}
 
+	b.child = child
 	if child != nil {
-		b.child = gtk.BaseWidget(child)
-		b.child.SetParent(b)
+		b.Box.Append(child)
 	}
 }
 
