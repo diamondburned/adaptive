@@ -134,7 +134,7 @@ var foldType = coreglib.RegisterSubclassWithConstructor(
 			fwidth: defaultFoldWidth,
 		}
 	},
-	coreglib.WithOverride(func(f *Fold) gtk.WidgetOverrides {
+	coreglib.WithOverrides(func(f *Fold) gtk.WidgetOverrides {
 		return gtk.WidgetOverrides{
 			SizeAllocate: f.sizeAllocate,
 		}
@@ -177,6 +177,9 @@ func NewFold(position gtk.PositionType) *Fold {
 }
 
 func (f *Fold) init() {
+	super := coreglib.ParentOverrides[coreglib.ObjectOverrides](f)
+	super.Init()
+
 	f.fold = false
 
 	f.sidebox = NewBin()
@@ -270,14 +273,16 @@ func (f *Fold) init() {
 
 func (f *Fold) dispose() {
 	f.parent.Unparent()
+
+	super := coreglib.ParentOverrides[coreglib.ObjectOverrides](f)
+	super.Dispose()
 }
 
 func (f *Fold) sizeAllocate(w, h, baseline int) {
-	log.Println(w, h)
-	f.updateLayout()
+	super := coreglib.ParentOverrides[gtk.WidgetOverrides](f)
+	super.SizeAllocate(w, h, baseline)
 
-	class := coreglib.ParentOverrides[gtk.WidgetOverrides]()
-	class.SizeAllocate(w, h, baseline)
+	f.updateLayout()
 }
 
 // SetWidthFunc sets the function to get the width to determine the fold
