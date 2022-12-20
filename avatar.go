@@ -71,6 +71,7 @@ type Avatar struct {
 
 	labelAttrs   *pango.AttrList
 	initialsFunc func(string) string
+	typeClass    string
 }
 
 // NewAvatar creates a new round image. If radius is 0, then it will be half the
@@ -95,6 +96,7 @@ func NewAvatar(size int) *Avatar {
 	avatar.AddCSSClass("adaptive-avatar")
 	avatar.Connect("notify::root", avatar.updateFontSize)
 
+	avatar.updateBin(false)
 	return avatar
 }
 
@@ -125,6 +127,12 @@ func (a *Avatar) SizeRequest() int {
 func (a *Avatar) SetFromFile(file string) {
 	a.Image.SetFromFile(file)
 	a.updateBin(file != "")
+}
+
+// SetFromIconName sets the avatar from the given icon name.
+func (a *Avatar) SetFromIconName(iconName string) {
+	a.Image.SetFromIconName(iconName)
+	a.updateBin(iconName != "")
 }
 
 // SetFromPixbuf sets the avatar from the given pixbuf.
@@ -187,17 +195,14 @@ func (a *Avatar) Initials() string {
 func (a *Avatar) SetInitials(initials string) {
 	a.Label.SetText(a.initialsFunc(initials))
 
-	var hasImage bool
 	switch t := a.Image.StorageType(); t {
-	case gtk.ImageEmpty, gtk.ImageIconName:
-		hasImage = false
-	case gtk.ImagePaintable:
-		hasImage = true
+	case gtk.ImageEmpty:
+		a.updateBin(false)
+	case gtk.ImageIconName, gtk.ImagePaintable:
+		a.updateBin(true)
 	default:
 		log.Panicln("unknown avatar image type", t)
 	}
-
-	a.updateBin(hasImage)
 }
 
 // SetAttributes sets the initial label's Pango attributes.
@@ -207,13 +212,28 @@ func (a *Avatar) SetAttributes(attrs *pango.AttrList) {
 }
 
 func (a *Avatar) updateBin(hasImage bool) {
-	if hasImage || a.Label.Text() == "" {
-		a.SetChild(a.Image)
-		return
+	if a.typeClass != "" {
+		a.RemoveCSSClass(a.typeClass)
+		a.typeClass = ""
 	}
 
-	a.updateFontSize()
-	a.SetChild(a.Label)
+	if !hasImage && a.Label.Text() != "" {
+		a.updateFontSize()
+		a.SetChild(a.Label)
+		a.typeClass = "adaptive-avatar-label"
+	} else {
+		a.SetChild(a.Image)
+		switch t := a.Image.StorageType(); t {
+		case gtk.ImageIconName:
+			a.typeClass = "adaptive-avatar-icon"
+		case gtk.ImagePaintable:
+			a.typeClass = "adaptive-avatar-image"
+		}
+	}
+
+	if a.typeClass != "" {
+		a.AddCSSClass(a.typeClass)
+	}
 }
 
 func (a *Avatar) updateFontSize() {
