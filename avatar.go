@@ -132,7 +132,7 @@ func (a *Avatar) SetFromFile(file string) {
 // SetFromIconName sets the avatar from the given icon name.
 func (a *Avatar) SetFromIconName(iconName string) {
 	a.Image.SetFromIconName(iconName)
-	a.updateBin(iconName != "")
+	a.updateBin(false)
 }
 
 // SetFromPixbuf sets the avatar from the given pixbuf.
@@ -217,18 +217,17 @@ func (a *Avatar) updateBin(hasImage bool) {
 		a.typeClass = ""
 	}
 
-	if !hasImage && a.Label.Text() != "" {
+	switch {
+	case !hasImage && a.Label.Text() != "":
 		a.updateFontSize()
 		a.SetChild(a.Label)
 		a.typeClass = "adaptive-avatar-label"
-	} else {
+	case a.Image.StorageType() == gtk.ImageIconName:
 		a.SetChild(a.Image)
-		switch t := a.Image.StorageType(); t {
-		case gtk.ImageIconName:
-			a.typeClass = "adaptive-avatar-icon"
-		case gtk.ImagePaintable:
-			a.typeClass = "adaptive-avatar-image"
-		}
+		a.typeClass = "adaptive-avatar-icon"
+	default:
+		a.SetChild(a.Image)
+		a.typeClass = "adaptive-avatar-image"
 	}
 
 	if a.typeClass != "" {
