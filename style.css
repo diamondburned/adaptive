@@ -26,13 +26,14 @@
 	filter: brightness(75%);
 }
 
-.adaptive-avatar > label,
-.adaptive-avatar > image {
+.adaptive-avatar,
+.adaptive-avatar * {
+	padding: 0;
 	border-radius: 9999px;
 }
 
-.adaptive-avatar > label,
-.adaptive-avatar-icon > image {
+.adaptive-avatar-icon,
+.adaptive-avatar-label > label {
 	background-color: mix(@theme_bg_color, @theme_fg_color, 0.2);
 }
 

@@ -125,7 +125,9 @@ func (a *Avatar) SizeRequest() int {
 
 // SetFromFile sets the avatar from the given filename.
 func (a *Avatar) SetFromFile(file string) {
-	a.Image.SetFromFile(file)
+	if file != "" {
+		a.Image.SetFromFile(file)
+	}
 	a.updateBin(file != "")
 }
 
@@ -137,13 +139,17 @@ func (a *Avatar) SetFromIconName(iconName string) {
 
 // SetFromPixbuf sets the avatar from the given pixbuf.
 func (a *Avatar) SetFromPixbuf(p *gdkpixbuf.Pixbuf) {
-	a.Image.SetFromPixbuf(p)
+	if p != nil {
+		a.Image.SetFromPixbuf(p)
+	}
 	a.updateBin(p != nil)
 }
 
 // SetFromPaintable sets the avatar from the given paintable.
 func (a *Avatar) SetFromPaintable(p gdk.Paintabler) {
-	a.Image.SetFromPaintable(p)
+	if p != nil {
+		a.Image.SetFromPaintable(p)
+	}
 	a.updateBin(p != nil)
 }
 
